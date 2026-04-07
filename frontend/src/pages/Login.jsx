@@ -1,73 +1,110 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ScanFace } from 'lucide-react';
+import { ScanFace, Loader } from 'lucide-react';
+import { authApi } from '../services/api';
+
+const PLATFORMS = ['Swiggy', 'Blinkit', 'Uber', 'Ola', 'Rapido', 'Zomato', 'Porter', 'Other'];
 
 const Login = () => {
+  const [mode, setMode]       = useState('login'); // 'login' | 'register'
   const [scanning, setScanning] = useState(false);
-  const [scanProgress, setScanProgress] = useState(0);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
+  const [form, setForm] = useState({ name: '', email: '', password: '', platform: 'Swiggy' });
   const navigate = useNavigate();
 
-  const handleScan = () => {
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
     setScanning(true);
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += 10;
-      setScanProgress(progress);
-      if (progress >= 100) {
-        clearInterval(interval);
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 500);
-      }
-    }, 200);
+
+    try {
+      const res = mode === 'login'
+        ? await authApi.login({ email: form.email, password: form.password })
+        : await authApi.register(form);
+
+      localStorage.setItem('gig_token', res.token);
+      localStorage.setItem('gig_user',  JSON.stringify(res.user));
+      setTimeout(() => navigate('/dashboard'), 600);
+    } catch (err) {
+      setError(err.message);
+      setScanning(false);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="login-container">
-      <div className="login-box">
+      <div className="login-box" style={{ maxWidth: '400px', width: '90%' }}>
         <h1 className="login-title">Gig-Sentry</h1>
-        <p className="login-subtitle">Secure Identity Verification</p>
+        <p className="login-subtitle">Financial Identity for Gig Workers</p>
 
-        <div 
-          onClick={!scanning ? handleScan : undefined}
-          className={`scan-area ${scanning ? 'scanning' : ''}`}
-        >
-          <ScanFace size={64} className={`scan-icon ${scanning ? 'scanning' : ''}`} />
-          
-          {scanning && (
-            <div 
-              style={{
-                position: 'absolute',
-                inset: 0,
-                backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                borderRadius: '50%',
-                clipPath: `polygon(0 ${100 - scanProgress}%, 100% ${100 - scanProgress}%, 100% 100%, 0% 100%)`,
-                transition: 'clip-path 0.2s linear'
-              }}
-            />
-          )}
-
-          {scanning && (
-            <div 
-              style={{
-                position: 'absolute',
-                width: '100%',
-                height: '4px',
-                backgroundColor: '#3b82f6',
-                boxShadow: '0 0 10px #3b82f6',
-                top: `${100 - scanProgress}%`,
-                transition: 'top 0.2s linear'
-              }}
-            />
-          )}
+        {/* Scan icon — animates on submit */}
+        <div className={`scan-area ${scanning ? 'scanning' : ''}`} style={{ pointerEvents: 'none', marginBottom: '24px' }}>
+          {loading
+            ? <Loader size={48} className="scan-icon" style={{ animation: 'spin 1s linear infinite' }} />
+            : <ScanFace size={48} className={`scan-icon ${scanning ? 'scanning' : ''}`} />
+          }
         </div>
 
-        <p className="login-status">
-          {scanning ? (
-            scanProgress < 100 ? 'Scanning biometrics...' : 'Identity Verified'
-          ) : (
-            'Tap to scan face'
+        {/* Toggle */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+          {['login', 'register'].map(m => (
+            <button
+              key={m}
+              onClick={() => { setMode(m); setError(''); }}
+              style={{
+                flex: 1, padding: '8px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+                fontWeight: 600, fontSize: '14px',
+                background: mode === m ? '#10b981' : 'rgba(255,255,255,0.08)',
+                color: mode === m ? '#fff' : '#94a3b8',
+              }}
+            >
+              {m === 'login' ? 'Sign In' : 'Register'}
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {mode === 'register' && (
+            <input
+              name="name" value={form.name} onChange={handleChange}
+              placeholder="Full Name" required className="form-input"
+            />
           )}
+          <input
+            name="email" type="email" value={form.email} onChange={handleChange}
+            placeholder="Email" required className="form-input"
+          />
+          <input
+            name="password" type="password" value={form.password} onChange={handleChange}
+            placeholder="Password" required className="form-input"
+          />
+          {mode === 'register' && (
+            <select name="platform" value={form.platform} onChange={handleChange} className="form-input">
+              {PLATFORMS.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          )}
+
+          {error && (
+            <p style={{ color: '#f87171', fontSize: '13px', textAlign: 'center' }}>{error}</p>
+          )}
+
+          <button
+            type="submit" disabled={loading}
+            className="btn-primary"
+            style={{ marginTop: '4px', opacity: loading ? 0.7 : 1 }}
+          >
+            {loading ? 'Verifying...' : mode === 'login' ? 'Sign In' : 'Create Account'}
+          </button>
+        </form>
+
+        <p style={{ marginTop: '16px', fontSize: '12px', color: '#475569', textAlign: 'center' }}>
+          Supported platforms: Swiggy · Blinkit · Uber · Ola · Rapido
         </p>
       </div>
     </div>
