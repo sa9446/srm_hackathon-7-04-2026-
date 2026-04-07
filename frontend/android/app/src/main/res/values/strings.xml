@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Gig-Sentry</string>
+    <string name="title_activity_main">Gig-Sentry</string>
+    <string name="package_name">com.gigsentry.app</string>
+    <string name="custom_url_scheme">com.gigsentry.app</string>
+</resources>

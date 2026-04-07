@@ -1,4 +1,7 @@
-const BASE_URL = 'http://localhost:5000/api';
+// On mobile (Capacitor/PWA on phone), localhost won't reach the backend.
+// Set VITE_API_URL in .env.local to your machine's local IP, e.g.:
+//   VITE_API_URL=http://10.105.193.53:5000/api
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 function getToken() {
   return localStorage.getItem('gig_token');
