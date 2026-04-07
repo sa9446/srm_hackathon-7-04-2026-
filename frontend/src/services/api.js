@@ -22,9 +22,10 @@ async function request(path, options = {}) {
 
 // ── Auth ─────────────────────────────────────────────────────
 export const authApi = {
-  login:    (body) => request('/auth/login',    { method: 'POST', body: JSON.stringify(body) }),
-  register: (body) => request('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
-  profile:  ()     => request('/auth/profile'),
+  login:     (body)       => request('/auth/login',       { method: 'POST', body: JSON.stringify(body) }),
+  register:  (body)       => request('/auth/register',    { method: 'POST', body: JSON.stringify(body) }),
+  faceLogin: (descriptor) => request('/auth/face-login',  { method: 'POST', body: JSON.stringify({ descriptor }) }),
+  profile:   ()           => request('/auth/profile'),
 };
 
 // ── History ───────────────────────────────────────────────────

@@ -1,114 +1,185 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ScanFace, Loader } from 'lucide-react';
+import { ScanFace, KeyRound } from 'lucide-react';
+import FaceScanner from '../components/FaceScanner';
 import { authApi } from '../services/api';
 
 const PLATFORMS = ['Swiggy', 'Blinkit', 'Uber', 'Ola', 'Rapido', 'Zomato', 'Porter', 'Other'];
 
-const Login = () => {
-  const [mode, setMode]       = useState('login'); // 'login' | 'register'
-  const [scanning, setScanning] = useState(false);
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState('');
-  const [form, setForm] = useState({ name: '', email: '', password: '', platform: 'Swiggy' });
+export default function Login() {
+  // 'choose' | 'face-login' | 'email-login' | 'register' | 'register-face'
+  const [screen, setScreen]   = useState('choose');
+  const [error, setError]     = useState('');
+  const [loading, setLoading] = useState(false);
+  const [form, setForm]       = useState({ name: '', email: '', password: '', platform: 'Swiggy' });
+  const [pendingDescriptor, setPendingDescriptor] = useState(null);
   const navigate = useNavigate();
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const saveAndGo = (res) => {
+    localStorage.setItem('gig_token', res.token);
+    localStorage.setItem('gig_user',  JSON.stringify(res.user));
+    navigate('/dashboard');
+  };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+  // ── Face login ───────────────────────────────────────────────
+  const handleFaceLogin = async (descriptor) => {
     setLoading(true);
-    setScanning(true);
-
+    setError('');
     try {
-      const res = mode === 'login'
-        ? await authApi.login({ email: form.email, password: form.password })
-        : await authApi.register(form);
-
-      localStorage.setItem('gig_token', res.token);
-      localStorage.setItem('gig_user',  JSON.stringify(res.user));
-      setTimeout(() => navigate('/dashboard'), 600);
+      const res = await authApi.faceLogin(descriptor);
+      saveAndGo(res);
     } catch (err) {
       setError(err.message);
-      setScanning(false);
+      setScreen('choose');
     } finally {
       setLoading(false);
     }
   };
 
+  // ── Email login ───────────────────────────────────────────────
+  const handleEmailLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      const res = await authApi.login({ email: form.email, password: form.password });
+      saveAndGo(res);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Register step 1: info ────────────────────────────────────
+  const handleRegisterInfo = (e) => {
+    e.preventDefault();
+    setError('');
+    setScreen('register-face');
+  };
+
+  // ── Register step 2: face capture ────────────────────────────
+  const handleRegisterFace = async (descriptor) => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await authApi.register({ ...form, faceDescriptor: descriptor });
+      saveAndGo(res);
+    } catch (err) {
+      setError(err.message);
+      setScreen('register');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSkipFace = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await authApi.register(form);
+      saveAndGo(res);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+  // ── Render ────────────────────────────────────────────────────
   return (
     <div className="login-container">
-      <div className="login-box" style={{ maxWidth: '400px', width: '90%' }}>
+      <div className="login-box" style={{ maxWidth: '420px', width: '90%' }}>
         <h1 className="login-title">Gig-Sentry</h1>
         <p className="login-subtitle">Financial Identity for Gig Workers</p>
 
-        {/* Scan icon — animates on submit */}
-        <div className={`scan-area ${scanning ? 'scanning' : ''}`} style={{ pointerEvents: 'none', marginBottom: '24px' }}>
-          {loading
-            ? <Loader size={48} className="scan-icon" style={{ animation: 'spin 1s linear infinite' }} />
-            : <ScanFace size={48} className={`scan-icon ${scanning ? 'scanning' : ''}`} />
-          }
-        </div>
-
-        {/* Toggle */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-          {['login', 'register'].map(m => (
-            <button
-              key={m}
-              onClick={() => { setMode(m); setError(''); }}
-              style={{
-                flex: 1, padding: '8px', borderRadius: '8px', border: 'none', cursor: 'pointer',
-                fontWeight: 600, fontSize: '14px',
-                background: mode === m ? '#10b981' : 'rgba(255,255,255,0.08)',
-                color: mode === m ? '#fff' : '#94a3b8',
-              }}
-            >
-              {m === 'login' ? 'Sign In' : 'Register'}
+        {/* ── Choose method ── */}
+        {screen === 'choose' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '8px' }}>
+            <button onClick={() => setScreen('face-login')} className="btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px' }}>
+              <ScanFace size={22} /> Sign In with Face ID
             </button>
-          ))}
-        </div>
+            <button onClick={() => setScreen('email-login')} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+              <KeyRound size={18} /> Sign In with Email
+            </button>
+            <div style={{ textAlign: 'center', color: '#475569', fontSize: '13px', marginTop: '4px' }}>
+              No account?{' '}
+              <span onClick={() => setScreen('register')} style={{ color: '#34d399', cursor: 'pointer', fontWeight: 600 }}>Register</span>
+            </div>
+            {error && <p style={{ color: '#f87171', fontSize: '13px', textAlign: 'center' }}>{error}</p>}
+          </div>
+        )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {mode === 'register' && (
-            <input
-              name="name" value={form.name} onChange={handleChange}
-              placeholder="Full Name" required className="form-input"
-            />
-          )}
-          <input
-            name="email" type="email" value={form.email} onChange={handleChange}
-            placeholder="Email" required className="form-input"
-          />
-          <input
-            name="password" type="password" value={form.password} onChange={handleChange}
-            placeholder="Password" required className="form-input"
-          />
-          {mode === 'register' && (
+        {/* ── Face login ── */}
+        {screen === 'face-login' && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+            <p style={{ color: '#94a3b8', fontSize: '14px', textAlign: 'center' }}>
+              Look at the camera. We'll recognise you automatically.
+            </p>
+            {loading
+              ? <p style={{ color: '#34d399' }}>Verifying identity...</p>
+              : <FaceScanner onDescriptor={handleFaceLogin} onError={setError} mode="login" autoCapture />
+            }
+            {error && <p style={{ color: '#f87171', fontSize: '13px', textAlign: 'center' }}>{error}</p>}
+            <button onClick={() => { setError(''); setScreen('choose'); }} style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', fontSize: '13px' }}>
+              ← Back
+            </button>
+          </div>
+        )}
+
+        {/* ── Email login ── */}
+        {screen === 'email-login' && (
+          <form onSubmit={handleEmailLogin} style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
+            <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="Email" required className="form-input" />
+            <input name="password" type="password" value={form.password} onChange={handleChange} placeholder="Password" required className="form-input" />
+            {error && <p style={{ color: '#f87171', fontSize: '13px', textAlign: 'center' }}>{error}</p>}
+            <button type="submit" disabled={loading} className="btn-primary">{loading ? 'Signing in...' : 'Sign In'}</button>
+            <button type="button" onClick={() => { setError(''); setScreen('choose'); }} style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', fontSize: '13px' }}>
+              ← Back
+            </button>
+          </form>
+        )}
+
+        {/* ── Register step 1: info ── */}
+        {screen === 'register' && (
+          <form onSubmit={handleRegisterInfo} style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
+            <input name="name" value={form.name} onChange={handleChange} placeholder="Full Name" required className="form-input" />
+            <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="Email" required className="form-input" />
+            <input name="password" type="password" value={form.password} onChange={handleChange} placeholder="Password (min 6 chars)" required minLength={6} className="form-input" />
             <select name="platform" value={form.platform} onChange={handleChange} className="form-input">
               {PLATFORMS.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
-          )}
+            {error && <p style={{ color: '#f87171', fontSize: '13px', textAlign: 'center' }}>{error}</p>}
+            <button type="submit" className="btn-primary">Next: Set up Face ID →</button>
+            <button type="button" onClick={() => { setError(''); setScreen('choose'); }} style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', fontSize: '13px' }}>
+              ← Back
+            </button>
+          </form>
+        )}
 
-          {error && (
-            <p style={{ color: '#f87171', fontSize: '13px', textAlign: 'center' }}>{error}</p>
-          )}
+        {/* ── Register step 2: face capture ── */}
+        {screen === 'register-face' && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+            <p style={{ color: '#94a3b8', fontSize: '14px', textAlign: 'center' }}>
+              Look at the camera to register your face for future logins.
+            </p>
+            {loading
+              ? <p style={{ color: '#34d399' }}>Creating your account...</p>
+              : <FaceScanner onDescriptor={handleRegisterFace} onError={setError} mode="register" autoCapture />
+            }
+            {error && <p style={{ color: '#f87171', fontSize: '13px', textAlign: 'center' }}>{error}</p>}
+            <button onClick={handleSkipFace} disabled={loading} style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', fontSize: '13px' }}>
+              Skip — register without Face ID
+            </button>
+          </div>
+        )}
 
-          <button
-            type="submit" disabled={loading}
-            className="btn-primary"
-            style={{ marginTop: '4px', opacity: loading ? 0.7 : 1 }}
-          >
-            {loading ? 'Verifying...' : mode === 'login' ? 'Sign In' : 'Create Account'}
-          </button>
-        </form>
-
-        <p style={{ marginTop: '16px', fontSize: '12px', color: '#475569', textAlign: 'center' }}>
-          Supported platforms: Swiggy · Blinkit · Uber · Ola · Rapido
+        <p style={{ marginTop: '20px', fontSize: '11px', color: '#334155', textAlign: 'center' }}>
+          Face data is processed locally and stored only on your account.
         </p>
       </div>
     </div>
   );
-};
-
-export default Login;
+}
