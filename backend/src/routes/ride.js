@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { startRide, stopRide, getRideStatus } = require('../controllers/ride.controller');
-const authMiddleware = require('../middleware/auth');
+const { getRideStatus, startRide, stopRide, getRideHistory } = require('../controllers/ride.controller');
+const auth = require('../middleware/auth');
 
-router.get('/status', authMiddleware, getRideStatus);
-router.post('/start', authMiddleware, startRide);
-router.post('/stop', authMiddleware, stopRide);
+router.get('/status',  auth, getRideStatus);
+router.get('/history', auth, getRideHistory);
+router.post('/start',  auth, startRide);
+router.post('/stop',   auth, stopRide);
 
 module.exports = router;

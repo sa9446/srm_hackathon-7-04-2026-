@@ -1,307 +1,176 @@
-Here’s a **complete, clean, hackathon-level README** you can copy-paste into GitHub.
-It’s written to sound like a **real startup project**, not a college submission.
+# Gig-Sentry
+
+> Financial identity for the gig economy.
+
+Gig-Sentry tracks the daily income, trips, and ratings of gig workers on platforms like **Swiggy, Blinkit, Uber, Ola, and Rapido** to generate a **Gig Score** (0–1000) — a creditworthiness metric that unlocks access to **loans and insurance** without a salary slip or formal employment history.
 
 ---
 
-# 🚀 Gig-Sentry
+## The Problem
 
-### *Real-Time Financial Identity Layer for Gig Workers*
+India has 15M+ gig workers. They earn daily, not monthly. Banks won't give them loans or insurance because they have no payslips, no formal employment history, and no credit score that reflects their real income.
 
----
-
-## 🧠 Overview
-
-Gig-Sentry is a fintech platform designed to solve the problem of **financial exclusion among gig workers**.
-
-Gig workers (delivery partners, drivers, freelancers) often lack:
-
-* stable income proof
-* formal credit history
-
-This prevents them from accessing:
-
-* loans
-* insurance
-* financial services
-
-👉 Gig-Sentry creates a **dynamic Gig Score** based on real-time work activity and provides a **portable financial identity**.
+Gig-Sentry solves this by being a **financial passport** built on actual work data.
 
 ---
 
-## 🔥 Key Features
+## How the Gig Score Works
 
-### 🔐 Facial Recognition Login
+The score (0–1000) is computed from logged work history using five factors:
 
-* Secure authentication using face recognition
-* Identity tied directly to the worker
+| Factor | Max Points | What it measures |
+|---|---|---|
+| Customer Rating | 250 | Avg rating across all logged days (1–5 stars) |
+| Income Consistency | 200 | Low variance in daily earnings — stable income = lower credit risk |
+| Earnings Volume | 200 | Average daily earnings relative to ₹2,000 benchmark |
+| Trip Activity | 200 | Average trips per day relative to 15-trip benchmark |
+| Tracking Tenure | 150 | Number of days with logged data (capped at 30 days) |
 
----
+### Score → Eligibility
 
-### 📊 Real-Time Dashboard
-
-* Displays Gig Score
-* Shows financial profile
-* Updates dynamically
-
----
-
-### 🚴 Ride Simulation (Core Backend Feature)
-
-* Start Ride → begins session
-* End Ride → generates work data
-* Automatically updates:
-
-  * earnings
-  * trips
-  * rating
+| Score | Label | Risk | Loan Range | Interest | Insurance |
+|---|---|---|---|---|---|
+| 800–1000 | Excellent | Low | ₹75,000 – ₹1,50,000 | 12% p.a. | Premium — ₹10L cover |
+| 650–799 | Good | Medium | ₹25,000 – ₹50,000 | 16% p.a. | Standard — ₹5L cover |
+| 450–649 | Fair | Medium | ₹5,000 – ₹10,000 | 22% p.a. | Basic — ₹2L cover |
+| 0–449 | Poor | High | Not eligible | — | Not eligible |
 
 ---
 
-### 🧠 Gig Score Engine
-
-Score calculated based on:
-
-* Rating (30%)
-* Earnings (30%)
-* Trips (20%)
-* Consistency (20%)
-
-👉 Output: Score out of 1000
-
----
-
-### 📈 Data Visualization
-
-* Earnings graph
-* Score trend
-* History table
-
----
-
-### 💰 Financial Insights
-
-* Loan eligibility (Low / Medium / High)
-* Risk level
-* Insurance preview
-
----
-
-## 🏗️ Architecture
+## Project Structure
 
 ```
-User → Frontend → Backend → Data Storage
-                     ↓
-                Score Engine
-                     ↓
-              Dashboard Update
+srm_hackathon-7-04-2026-/
+├── frontend/                     React + Vite dashboard (gig worker UI)
+│   └── src/
+│       ├── pages/                Login, Dashboard
+│       └── components/
+│           ├── dashboard/        MetricCard, ChartsSection, HistoryTable,
+│           │                     AddEntryForm, RideControl, StatusPanel,
+│           │                     LoanInsuranceCards
+│           └── layout/           Sidebar, TopNavbar
+│
+├── backend/                      Node.js + Express REST API
+│   ├── server.js
+│   └── src/
+│       ├── services/
+│       │   └── scoreEngine.js    ← Gig Score algorithm
+│       ├── routes/               auth · history · score · ride
+│       ├── controllers/
+│       ├── middleware/auth.js    ← JWT verification
+│       └── db.js                ← PostgreSQL pool
+│
+└── database/
+    ├── schema.sql                Table definitions + constraints
+    └── seed.sql                  14-day demo dataset (Ravi Kumar / Swiggy)
 ```
 
 ---
 
-## ⚙️ Tech Stack
+## Tech Stack
 
-### Frontend
-
-* HTML / CSS / JavaScript (No Tailwind)
-* Chart.js (for graphs)
-* AI-generated UI (Antigravity)
-
----
-
-### Backend
-
-* Python (Flask)
-* REST APIs
-* In-memory / JSON storage
+| Layer | Technology |
+|---|---|
+| Frontend | React 19, Vite, Chart.js, React Router |
+| Backend | Node.js, Express.js, JWT |
+| Database | PostgreSQL |
+| Auth | bcryptjs (passwords) + JSON Web Tokens |
 
 ---
 
-### Authentication
+## API Reference
 
-* Facial Recognition (OpenCV / external module)
+All protected routes require `Authorization: Bearer <token>`.
+
+### Auth
+| Method | Endpoint | Body | Description |
+|---|---|---|---|
+| POST | `/api/auth/register` | `{ name, email, password, platform }` | Register a gig worker |
+| POST | `/api/auth/login` | `{ email, password }` | Login, returns JWT |
+| GET | `/api/auth/profile` | — | Profile + current Gig Score |
+
+### Income History
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/history` | Fetch work history (supports `?limit=&offset=`) |
+| POST | `/api/history` | Log a new work day — triggers score recalculation |
+| DELETE | `/api/history/:id` | Remove an entry |
+
+**POST /api/history body:**
+```json
+{
+  "earnings": 1500,
+  "trips": 12,
+  "rating": 4.8,
+  "weather": "Normal",
+  "date": "2026-04-07T18:00:00Z"
+}
+```
+
+### Gig Score
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/score` | Full score with breakdown + loan & insurance info |
+| GET | `/api/score/loan` | Loan eligibility tier and amount range |
+| GET | `/api/score/insurance` | Insurance plan details |
+| POST | `/api/score/recompute` | Force-recalculate from raw history (90-day window) |
+
+### Ride Sessions
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/ride/start` | Start a work session |
+| POST | `/api/ride/stop` | End the active session |
+| GET | `/api/ride/status` | Current session status + live duration |
+| GET | `/api/ride/history` | Last 20 sessions |
 
 ---
 
-## 🔗 API Endpoints
+## Setup
 
-### 1. Start Ride
+### Prerequisites
+- Node.js 18+
+- PostgreSQL 14+
 
-```
-POST /start-ride
-```
-
-Starts a ride session.
-
----
-
-### 2. End Ride
-
-```
-POST /end-ride
+### 1. Database
+```bash
+psql -U postgres -f database/schema.sql
+psql -U postgres -d gig_sentry_db -f database/seed.sql
 ```
 
-Generates:
-
-* earnings
-* trips
-* rating
-  and saves entry.
-
----
-
-### 3. Get Data
-
-```
-GET /get-data
-```
-
-Returns:
-
-* all history
-* gig score
-* loan eligibility
-* risk level
-
----
-
-### 4. Status
-
-```
-GET /status
-```
-
-Returns:
-
-* ride active state
-
----
-
-### 5. Add Entry (Manual)
-
-```
-POST /add-entry
-```
-
-Adds custom work data.
-
----
-
-## 📊 Gig Score Logic
-
-```
-Score = 
-( Rating * 0.3 ) +
-( Earnings * 0.3 ) +
-( Trips * 0.2 ) +
-( Consistency * 0.2 )
-```
-
-Final score normalized to **0–1000**
-
----
-
-## 🚀 How to Run
-
-### 🔧 Backend
-
+### 2. Backend
 ```bash
 cd backend
-pip install flask flask-cors
-python app.py
-```
-
-Runs on:
-
-```
-http://127.0.0.1:5000
-```
-
----
-
-### 💻 Frontend
-
-If HTML:
-
-```bash
-open index.html
-```
-
-If React:
-
-```bash
+cp .env.example .env
+# Edit .env: set DATABASE_URL and JWT_SECRET
 npm install
-npm run dev
+npm run dev          # http://localhost:5000
+```
+
+### 3. Frontend
+```bash
+cd frontend
+npm install
+npm run dev          # http://localhost:5173
 ```
 
 ---
 
-## 🔗 Frontend ↔ Backend Connection
+## Platforms Supported
 
-Example API call:
-
-```js
-fetch("http://127.0.0.1:5000/get-data")
-  .then(res => res.json())
-  .then(data => console.log(data));
-```
+Swiggy · Blinkit · Uber · Ola · Rapido · Zomato · Porter · Other
 
 ---
 
-## 🔮 Future Scope
+## Future Scope
 
-* 🌧️ Weather API integration
-* 🔗 ONDC integration
-* 🧾 Account Aggregator support
-* 🤖 AI-based risk prediction
-* 🏦 Bank/NBFC partnerships
-
----
-
-## 🎯 Problem Solved
-
-Gig-Sentry addresses:
-
-* ❌ Fragmented work data
-* ❌ Lack of financial identity
-* ❌ Credit inaccessibility
+- ONDC / Account Aggregator integration to auto-pull earnings data
+- Weather API to contextualise low-earning days (rain, heat)
+- Bank / NBFC partner portal to receive pre-qualified leads
+- AI-based risk prediction (default probability model)
+- UPI-linked real-time earnings ingestion
 
 ---
 
-## 💡 Innovation
+## Team
 
-* Portable Gig Score
-* Real-time financial profiling
-* Platform-independent system
-* Usage-based financial services
-
----
-
-## 👥 Team
-
-* Backend Development
-* Frontend Development
-* AI / Facial Recognition
-* Product Design
-
----
-
-## 🎤 Pitch Summary
-
-> Gig-Sentry transforms gig workers’ daily activity into a real-time financial identity, enabling fair access to loans and insurance — independent of platforms.
-
----
-
-# 💬 Final tip
-
-After uploading:
-👉 Add screenshots of your dashboard
-👉 Makes your repo look 10x better
-
----
-
-If you want:
-
-* I can add **badges + screenshots section**
-* or make it look like a **startup-level GitHub repo**
-
-Just tell me 👍
+Built at SRM Hackathon — April 7, 2026.

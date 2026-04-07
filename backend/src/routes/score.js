@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { getScore, getLoanEligibility } = require('../controllers/score.controller');
-const authMiddleware = require('../middleware/auth');
+const { getScore, getLoan, getInsurance, recompute } = require('../controllers/score.controller');
+const auth = require('../middleware/auth');
 
-router.get('/', authMiddleware, getScore);
-router.get('/loan', authMiddleware, getLoanEligibility);
+router.get('/',           auth, getScore);
+router.get('/loan',       auth, getLoan);
+router.get('/insurance',  auth, getInsurance);
+router.post('/recompute', auth, recompute);
 
 module.exports = router;
