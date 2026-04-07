@@ -39,6 +39,7 @@ export const scoreApi = {
   get:       () => request('/score'),
   loan:      () => request('/score/loan'),
   insurance: () => request('/score/insurance'),
+  recompute: () => request('/score/recompute', { method: 'POST' }),
 };
 
 // ── Ride ──────────────────────────────────────────────────────

@@ -1,28 +1,38 @@
 import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, History, PiggyBank, ShieldCheck, Settings } from 'lucide-react';
 
+const NAV = [
+  { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+  { label: 'History',   icon: History,         path: '/history'   },
+  { label: 'Loans',     icon: PiggyBank,       path: '/loans'     },
+  { label: 'Insurance', icon: ShieldCheck,     path: '/insurance' },
+  { label: 'Settings',  icon: Settings,        path: '/settings'  },
+];
+
 const Sidebar = () => {
+  const navigate  = useNavigate();
+  const { pathname } = useLocation();
+
   return (
     <div className="sidebar sidebar-hidden">
       <div className="sidebar-header">
         <h1 className="brand-text">Gig-Sentry</h1>
       </div>
       <nav className="sidebar-nav">
-        <NavItem icon={<LayoutDashboard size={20} />} label="Dashboard" active />
-        <NavItem icon={<History size={20} />} label="History" />
-        <NavItem icon={<PiggyBank size={20} />} label="Loans" />
-        <NavItem icon={<ShieldCheck size={20} />} label="Insurance" />
-        <NavItem icon={<Settings size={20} />} label="Settings" />
+        {NAV.map(({ label, icon: Icon, path }) => (
+          <button
+            key={path}
+            className={`nav-item ${pathname === path ? 'active' : ''}`}
+            onClick={() => navigate(path)}
+          >
+            <Icon size={20} />
+            <span>{label}</span>
+          </button>
+        ))}
       </nav>
     </div>
   );
 };
-
-const NavItem = ({ icon, label, active }) => (
-  <button className={`nav-item ${active ? 'active' : ''}`}>
-    {icon}
-    <span>{label}</span>
-  </button>
-);
 
 export default Sidebar;
